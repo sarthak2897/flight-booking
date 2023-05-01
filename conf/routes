@@ -1,0 +1,20 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# https://www.playframework.com/documentation/latest/ScalaRouting
+# ~~~~
+
+# An example controller showing a sample home page
+GET     /                           controllers.FlightController.index()
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
+GET /flights/:limit controllers.FlightController.findAllFlightRecords(limit : Int)
+
+GET /totalFlightRecords controllers.FlightController.totalFlightRecords()
+
+POST /bookFlight controllers.BookingController.bookFlight()
+
+GET /fetchBookedFlights/:customerId controllers.BookingController.fetchBookedFlightsPerCustomer(customerId : Int)
+
+DELETE /cancelBookedTicket/:customerId/:bookingId controllers.BookingController.cancelBookedTicketPerCustomer(customerId:Int,bookingId : String)
