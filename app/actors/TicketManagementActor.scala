@@ -7,7 +7,7 @@ import models.{BookingDetails, Ticket}
 import play.api.Logger
 import utils.Utils
 
-import java.time.LocalTime
+import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +30,7 @@ class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,v
       val flightDetails = flightsRepository.findFlightRecordsById(Utils.generateId(ticket.airline+ticket.flightNo.toString+ticket.source+ticket.destination))
       val bookingDetails : Future[BookingDetails] = flightDetails.flatMap(flightDetail => {
         val fd = flightDetail.head
-        val bookingMessage = BookingDetails(ticket = ticket, pnr = fd.pnr,bookingTime = LocalTime.now(), departureTime= fd.departureTime,message = None)
+        val bookingMessage = BookingDetails(ticket = ticket, pnr = fd.pnr,bookingTime = LocalDateTime.now(), departureTime= fd.departureTime.atDate(ticket.departureDate),message = None)
         val totalFlightSeats = fd.totalSeats
         if(totalFlightSeats < ticket.totalSeats)
           Future(bookingMessage.copy(message = Some(s"Seats for airline ${ticket.airline} ,flight no ${ticket
@@ -49,7 +49,7 @@ class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,v
       //Compare if the current time is 2 hrs behind the departure time, then only the ticket can be cancelled
       val bookingDetails = ticketBookingRepository.fetchTicketsPerBookingId(bookingId).flatMap(x => {
         val bookingDetail = x.head
-        if(bookingDetail.departureTime.until(LocalTime.now(), ChronoUnit.HOURS) >= 2) {
+        if(bookingDetail.departureTime.until(LocalDateTime.now(), ChronoUnit.HOURS) >= 2) {
           val id = Utils.generateId(bookingDetail.ticket.airline+bookingDetail.ticket.flightNo.toString+
             bookingDetail.ticket.source+bookingDetail.ticket.destination)
           for {
