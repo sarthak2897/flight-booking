@@ -1,5 +1,7 @@
 package utils
 
+import models.{BookingDetails, Ticket}
+
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -40,6 +42,24 @@ object Utils {
 
   def generatePNR(input : String) = {
     input + java.util.UUID.randomUUID().toString.substring(0,3)
+  }
+
+  def ticketCancellationSuccess(bookingDetail: BookingDetails,bookingId : String) = {
+    s"Flight booking for airline ${bookingDetail.ticket.airline} and flight no ${bookingDetail.ticket.flightNo} " +
+      s"departing at ${bookingDetail.departureTime} from ${bookingDetail.ticket.source} having " +
+      s"booking id ${bookingId} has been cancelled."
+  }
+
+  def ticketCancellationFailure(bookingId : String) = {
+    s"Flight having booking Id ${bookingId} cannot be cancelled less than two hours of departure."
+  }
+
+  val FLIGHT_NOT_FOUND = "The flight details you are trying to book were not found"
+
+  def bookingNotFound(bookingId : String,customerId : Int) = s"Booking Id ${bookingId} not found for customer ${customerId}"
+
+  def seatsFullMessage(ticket : Ticket) = {
+    s"Seats full for airline ${ticket.airline} ,flight no ${ticket.flightNo} departing from ${ticket.source} to ${ticket.destination}"
   }
 
 }
