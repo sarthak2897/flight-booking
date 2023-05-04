@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Flow
 import models.FlightDetails
 import play.api.Logger
 import reactivemongo.core.errors.DatabaseException
-import utils.Utils.{calculateAirTime, formatTime, generateId, generatePNR}
+import utils.Utils.{calculateAirTime, calculatePrice, formatTime, generateId, generatePNR}
 
 import scala.util.Try
 
@@ -29,7 +29,8 @@ object AppFlows {
      arrivalTime = formatTime(flightsList(20)),
      airTime = Try(calculateAirTime(flightsList(16).toInt)).getOrElse("0 mins"),
      distance = flightsList(17)+" km",
-     pnr = generatePNR(flightsList(4)+flightsList(5)))
+     pnr = generatePNR(flightsList(4)+flightsList(5)),
+     price = calculatePrice(flightsList(17).toInt))
   }
 
   val decider: Supervision.Decider = {

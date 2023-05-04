@@ -1,6 +1,6 @@
 package actors
 
-import MongoDao.{FlightsRepository, TicketBookingRepository}
+import MongoDao.{FlightsRepository, PaymentsRepository, TicketBookingRepository}
 import actors.BookingActor.{BookTicket, CancelBookedTicket, FetchBookedTickets}
 import akka.actor.{Actor, Props}
 import akka.pattern.{ask, pipe}
@@ -16,8 +16,9 @@ import scala.concurrent.duration.DurationInt
 
 object BookingActor {
 
-  def props(flightsRepository : FlightsRepository, ticketBookingRepository : TicketBookingRepository)(implicit ec : ExecutionContext) =
-    Props(new BookingActor(flightsRepository,ticketBookingRepository))
+  def props(flightsRepository : FlightsRepository, ticketBookingRepository : TicketBookingRepository,
+  paymentsRepository : PaymentsRepository)(implicit ec : ExecutionContext) =
+    Props(new BookingActor(flightsRepository,ticketBookingRepository,paymentsRepository))
   case class BookTicket(ticket : Ticket)
   case class FetchBookedTickets(customerId : Int)
   case class CancelBookedTicket(customerId : Int,bookingId : String)
@@ -29,14 +30,15 @@ object BookingActor {
   }
 }
 
-class BookingActor @Inject() (flightsRepository : FlightsRepository, ticketBookingRepository : TicketBookingRepository)(implicit val ec : ExecutionContext) extends Actor {
+class BookingActor @Inject() (flightsRepository : FlightsRepository, ticketBookingRepository
+: TicketBookingRepository,paymentsRepository: PaymentsRepository)(implicit val ec : ExecutionContext) extends Actor {
 
    implicit val timeout: Timeout = 30.seconds
    val logger : Logger = Logger(this.getClass)
 
   def createTicketManager(bookingId : String) = {
     val id = f"book-$bookingId"
-    context.actorOf(TicketManagementActor.props(flightsRepository,ticketBookingRepository), id)
+    context.actorOf(TicketManagementActor.props(flightsRepository,ticketBookingRepository,paymentsRepository), id)
   }
 
   override def receive: Receive = {

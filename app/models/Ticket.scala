@@ -19,7 +19,8 @@ case class BookingDetails(customerId : Int = 1,
                           pnr : String,
                           bookingTime : LocalDateTime,
                           departureTime : LocalDateTime,
-                          message : Option[String])
+                          bookingStatus : Option[String],
+                          paymentStatus : Option[String])
 
 object Ticket {
   implicit val ticketFormat = Json.format[Ticket]
@@ -64,7 +65,8 @@ object BookingDetails {
         bson.getAsTry[String]("pnr").get,
         bson.getAsTry[Long]("bookingTime").map(x => LocalDateTime.ofInstant(Instant.ofEpochMilli(x),ZoneId.systemDefault())).get,
         bson.getAsTry[Long]("departureTime").map(dt => LocalDateTime.ofInstant(Instant.ofEpochMilli(dt), ZoneId.systemDefault())).get,
-        bson.getAsTry[String]("message").toOption))
+        bson.getAsTry[String]("bookingStatus").toOption,
+        bson.getAsTry[String]("paymentStatus").toOption))
     }
   }
 
@@ -77,7 +79,8 @@ object BookingDetails {
         "pnr" -> fd.pnr,
         "bookingTime" -> fd.bookingTime,
         "departureTime" -> fd.departureTime,
-        "message" -> fd.message.get
+        "bookingStatus" -> fd.bookingStatus.get,
+        "paymentStatus" -> fd.paymentStatus.get
       ))
     }
 

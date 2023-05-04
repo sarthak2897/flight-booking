@@ -44,6 +44,14 @@ object Utils {
     input + java.util.UUID.randomUUID().toString.substring(0,3)
   }
 
+  def calculatePrice(distance : Int) = {
+    if(distance <= 1000) 30.0
+    else if(distance > 1000 & distance <= 2000) 60.0
+    else if(distance > 2000 & distance <=3000) 90.0
+    else if(distance > 3000 & distance <= 4000) 120.0
+    else 150.0
+  }
+
   def ticketCancellationSuccess(bookingDetail: BookingDetails,bookingId : String) = {
     s"Flight booking for airline ${bookingDetail.ticket.airline} and flight no ${bookingDetail.ticket.flightNo} " +
       s"departing at ${bookingDetail.departureTime} from ${bookingDetail.ticket.source} having " +
@@ -55,6 +63,12 @@ object Utils {
   }
 
   val FLIGHT_NOT_FOUND = "The flight details you are trying to book were not found"
+
+  val FLIGHT_BOOKING_SUCCESSFUL = "Successfully booked ticket."
+
+  val PAYMENT_INCOMPLETE = "PAYMENT_INCOMPLETE"
+  val PAYMENT_SUCCESSFUL = "PAYMENT_SUCCESSFUL"
+  val PAYMENT_FAILED = "PAYMENT_FAILED"
 
   def bookingNotFound(bookingId : String,customerId : Int) = s"Booking Id ${bookingId} not found for customer ${customerId}"
 

@@ -1,11 +1,14 @@
 package actors
 
-import MongoDao.{FlightsRepository, TicketBookingRepository}
+import MongoDao.{FlightsRepository, PaymentsRepository, TicketBookingRepository}
 import akka.actor.{Actor, Props}
 import akka.pattern.pipe
-import models.{BookingDetails, FlightDetails, Ticket}
+import com.stripe.model.{Customer, PaymentIntent}
+import com.stripe.param.{CustomerCreateParams, PaymentIntentCreateParams}
+import models.{BookingDetails, FlightDetails, PaymentResponse, Ticket}
 import play.api.Logger
 import utils.Utils
+import utils.Utils.{FLIGHT_BOOKING_SUCCESSFUL, PAYMENT_FAILED, PAYMENT_SUCCESSFUL}
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -13,14 +16,18 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 object TicketManagementActor {
-  def props(flightsRepository : FlightsRepository, ticketBookingRepository : TicketBookingRepository)
-           (implicit ec : ExecutionContext) = Props(new TicketManagementActor(flightsRepository,ticketBookingRepository))
+  def props(flightsRepository : FlightsRepository,
+            ticketBookingRepository : TicketBookingRepository,
+            paymentsRepository: PaymentsRepository)
+           (implicit ec : ExecutionContext) = Props(new TicketManagementActor(flightsRepository,
+    ticketBookingRepository,paymentsRepository))
   case class Buy(ticket : Ticket)
   case class CancelBooking(customerId : Int,bookingId : String)
 }
 
-class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,val ticketBookingRepository: TicketBookingRepository)
-                                     (implicit ec: ExecutionContext)  extends Actor{
+class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,
+                                      val ticketBookingRepository: TicketBookingRepository,
+                                      val paymentsRepository: PaymentsRepository)(implicit ec: ExecutionContext)  extends Actor{
 
   final val logger : Logger = Logger(this.getClass)
   import TicketManagementActor._
@@ -30,7 +37,8 @@ class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,v
       val flightDetails = flightsRepository.findFlightRecordsById(Utils.generateId(ticket.airline+ticket.flightNo.toString+ticket.source+ticket.destination))
       val bookingDetails : Future[BookingDetails] = flightDetails.flatMap(flightDetail => {
         if(flightDetail.isEmpty)
-          Future(BookingDetails(ticket = ticket,pnr = null,bookingTime = LocalDateTime.now(), departureTime = LocalDateTime.MIN, message = Some(Utils.FLIGHT_NOT_FOUND)))
+          Future(BookingDetails(ticket = ticket,pnr = null,bookingTime = LocalDateTime.now(), departureTime =
+            LocalDateTime.MIN, bookingStatus = Some(Utils.FLIGHT_NOT_FOUND),paymentStatus = None))
         else bookTicket(flightDetail,ticket)
       })
       bookingDetails pipeTo sender()
@@ -47,16 +55,19 @@ class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,v
   def bookTicket(flightDetail : List[FlightDetails], ticket : Ticket) = {
     val fd = flightDetail.head
     val bookingMessage = BookingDetails(ticket = ticket, pnr = fd.pnr, bookingTime = LocalDateTime.now(),
-      departureTime = fd.departureTime.atDate(ticket.departureDate), message = None)
+      departureTime = fd.departureTime.atDate(ticket.departureDate), bookingStatus = None,paymentStatus = None)
     val totalFlightSeats = fd.totalSeats
     if (totalFlightSeats < ticket.totalSeats)
-      Future(bookingMessage.copy(message = Some(Utils.seatsFullMessage(ticket))))
+      Future(bookingMessage.copy(bookingStatus = Some(Utils.seatsFullMessage(ticket))))
     else {
-      val successBookingMessage = bookingMessage.copy(message = Some(s"Successfully booked ticket."))
+      val successBookingMessage = bookingMessage.copy(bookingStatus = Some(FLIGHT_BOOKING_SUCCESSFUL))
       for {
+        paymentResponse <- performPayment(successBookingMessage.customerId,ticket.bookingId.get,fd.price.toLong)
+        _ <- paymentsRepository.performPayment(paymentResponse)
+        bookingMessageWithPaymentStatus <- Future(successBookingMessage.copy(paymentStatus = Some(paymentResponse.status)))
+        _ <- ticketBookingRepository.bookFlightTickets(bookingMessageWithPaymentStatus)
         _ <- flightsRepository.updateTotalSeats(fd.id, fd.copy(totalSeats = totalFlightSeats - ticket.totalSeats))
-        _ <- ticketBookingRepository.bookFlightTickets(successBookingMessage)
-      } yield successBookingMessage
+      } yield bookingMessageWithPaymentStatus
     }
   }
 
@@ -74,5 +85,27 @@ class TicketManagementActor @Inject()(val flightsRepository: FlightsRepository,v
       } yield Utils.ticketCancellationSuccess(bookingDetail,bookingId)
     }
     else Future(Utils.ticketCancellationFailure(bookingId))
+  }
+
+  def performPayment(customerId : Int,bookingId : String,amount : Long) = {
+    try{
+      val customerParams = CustomerCreateParams.builder()
+        .setName(customerId.toString).build()
+      val customer = Customer.create(customerParams)
+
+      val intentParams = PaymentIntentCreateParams.builder()
+        .setCustomer(customer.getId)
+        .setSetupFutureUsage(PaymentIntentCreateParams.SetupFutureUsage.OFF_SESSION)
+        .setAmount(amount).setCurrency("usd")
+        .build()
+
+      val paymentIntent : PaymentIntent = PaymentIntent.create(intentParams)
+      Future(PaymentResponse(customerId,bookingId,amount, paymentIntent.getId,PAYMENT_SUCCESSFUL))
+    }
+    catch {
+      case e : Exception =>
+        e.printStackTrace()
+        Future(PaymentResponse(customerId,bookingId,amount,null,PAYMENT_FAILED))
+    }
   }
 }

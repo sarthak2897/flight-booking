@@ -18,7 +18,8 @@ case class FlightDetails(id : String,
                          airTime : String,
                          distance : String,
                          totalSeats : Int = 180,
-                         pnr : String
+                         pnr : String,
+                         price : Double
                         )
 
 object FlightDetails {
@@ -37,7 +38,8 @@ object FlightDetails {
         bson.getAs[String]("airTime").get,
         bson.getAs[String]("distance").get,
         bson.getAs[Int]("totalSeats").get,
-        bson.getAs[String]("pnr").get))
+        bson.getAs[String]("pnr").get,
+        bson.getAsTry[Double]("price").get))
     }
   }
 
@@ -55,7 +57,8 @@ object FlightDetails {
         "airTime" -> fd.airTime,
         "distance" -> fd.distance,
         "totalSeats" -> fd.totalSeats,
-        "pnr" -> fd.pnr))
+        "pnr" -> fd.pnr,
+        "price" -> fd.price))
     }
 
   }

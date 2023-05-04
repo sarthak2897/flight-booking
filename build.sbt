@@ -19,17 +19,16 @@ lazy val akkaDependencies = Seq(
 lazy val mongoDependencies = Seq(
   // Enable reactive mongo for Play 2.8
   "org.reactivemongo" %% "play2-reactivemongo" % "1.0.10-play28",
- // "org.reactivemongo" %% "reactivemongo" % "1.1.0-RC9",
   // Provide JSON serialization for reactive mongo
-  //"org.reactivemongo" %% "reactivemongo-play-json-compat" % "1.0.1-play28",
   // Provide BSON serialization for reactive mongo
   "org.reactivemongo" %% "reactivemongo-bson-compat" % "0.20.13",
   // Provide JSON serialization for Joda-Time
   "com.typesafe.play" %% "play-json-joda" % "2.7.4")
-//  "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.20.13")
+
+lazy val stripeDependency = Seq("com.stripe" % "stripe-java" % "20.86.0")
 
 libraryDependencies += guice
-libraryDependencies ++= (akkaDependencies ++ mongoDependencies)
+libraryDependencies ++= (akkaDependencies ++ mongoDependencies ++ stripeDependency)
 //libraryDependencies += guice
 
 
