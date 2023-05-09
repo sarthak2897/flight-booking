@@ -6,7 +6,7 @@ organization := "com.sarthak"
 
 version := "1.0-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala,LauncherJarPlugin)
 
 scalaVersion := "2.13.10"
 
@@ -27,9 +27,10 @@ lazy val mongoDependencies = Seq(
 
 lazy val stripeDependency = Seq("com.stripe" % "stripe-java" % "20.86.0")
 
+lazy val kafkaDependency = Seq("com.typesafe.akka" %% "akka-stream-kafka" % "2.1.0")
+
 libraryDependencies += guice
-libraryDependencies ++= (akkaDependencies ++ mongoDependencies ++ stripeDependency)
-//libraryDependencies += guice
+libraryDependencies ++= (akkaDependencies ++ mongoDependencies ++ stripeDependency ++ kafkaDependency)
 
 
 

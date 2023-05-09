@@ -1,5 +1,6 @@
 package modules.flows
 
+import MongoDao.FlightsRepository
 import akka.NotUsed
 import akka.stream.Supervision
 import akka.stream.scaladsl.Flow
@@ -8,6 +9,7 @@ import play.api.Logger
 import reactivemongo.core.errors.DatabaseException
 import utils.Utils.{calculateAirTime, calculatePrice, formatTime, generateId, generatePNR}
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 object AppFlows {
@@ -16,6 +18,12 @@ object AppFlows {
 
   val mappingFlow: Flow[String, FlightDetails, NotUsed] = Flow[String].async
     .map(line => toFlightDetails(line.split(",").toList))
+
+  def insertFlightRecords(flightDetails: FlightDetails,flightsRepository: FlightsRepository)(implicit ec : ExecutionContext) = {
+    for {
+      _ <- flightsRepository.insertFlightRecords(flightDetails)
+    } yield flightDetails
+  }
 
 
   def toFlightDetails(flightsList : List[String]) = {
